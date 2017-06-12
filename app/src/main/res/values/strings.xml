@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Hacker News</string>
+    <string name="error_message">Something went wrong :(</string>
+    <string name="view_story">View Story</string>
+    <string name="no_comments">No comments so far</string>
+    <string name="no_stories">No stories for some reason</string>
+    <string name="top_level_comments" formatted="false">Top level comments (%s)</string>
+    <string name="story_line" formatted="false">%s points by %s, %s</string>
+    <string name="comment_line" formatted="false">by %s, %s</string>
+    <string name="points_line" formatted="false">%s points</string>
+    <string name="view_comments" formatted="false">VIEW REPLIES (%s)</string>
+    <string name="comments_under" formatted="false">%s thread (%s)</string>
+</resources>

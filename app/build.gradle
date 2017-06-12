@@ -1,0 +1,102 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'realm-android'
+
+
+android {
+    compileSdkVersion 25
+    buildToolsVersion "25.0.3"
+    defaultConfig {
+        applicationId "propertyguru.androidtest.com.hackernews"
+        minSdkVersion 16
+        targetSdkVersion 25
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        vectorDrawables.useSupportLibrary = true
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+
+    dataBinding {
+        enabled = true
+    }
+}
+
+dependencies {
+    //compile fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Data binding compiler for kotlin
+    kapt 'com.android.databinding:compiler:2.3.2'
+
+    //support libraries
+    compile "com.android.support:appcompat-v7:$support_version"
+    compile "com.android.support:design:$support_version"
+    compile "com.android.support:cardview-v7:$support_version"
+    compile "com.android.support:customtabs:$support_version"
+    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+
+    // std lib for Kotlin
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+
+    // Dependency injection
+    compile "com.google.dagger:dagger:$dagger_version"
+    kapt "com.google.dagger:dagger-compiler:$dagger_version"
+
+    // Anko Commons
+    compile "org.jetbrains.anko:anko-commons:$anko_version"
+
+    // API: Http/REST client, Json parser
+    compile "com.squareup.retrofit2:retrofit:$retrofit_version"
+    compile "com.squareup.retrofit2:converter-gson:$retrofit_version"
+    compile "com.squareup.retrofit2:converter-gson:$retrofit_version"
+    compile 'com.squareup.okhttp3:okhttp:3.8.0'
+    compile 'com.github.salomonbrys.kotson:kotson:2.5.0'
+
+    //nice date time format
+    compile 'org.ocpsoft.prettytime:prettytime:4.0.1.Final'
+
+    //UI decoration stuff
+    compile 'com.tuyenmonkey:mkloader:1.0.0'
+    compile 'com.github.recruit-lifestyle:WaveSwipeRefreshLayout:1.6'
+    compile 'cn.pedant.sweetalert:library:1.3'
+    compile 'com.patrickpissurno:ripple-effect:1.3.1'
+
+    //coroutines
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"
+
+    //Memory leak detection (uncomment if you need deeper analyse)
+    compile "com.squareup.leakcanary:leakcanary-android-no-op:$leakcanary_version"
+    //debugCompile "com.squareup.leakcanary:leakcanary-android:$leakcanary_version"
+    //releaseCompile "com.squareup.leakcanary:leakcanary-android-no-op:$leakcanary_version"
+    //testCompile "com.squareup.leakcanary:leakcanary-android-no-op:$leakcanary_version"
+
+    //testing
+    testCompile 'junit:junit:4.12'
+    androidTestCompile 'org.awaitility:awaitility:3.0.0'
+    androidTestCompile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+    androidTestCompile "com.nhaarman:mockito-kotlin:1.4.0"
+    androidTestCompile 'org.mockito:mockito-android:2.+'
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin { experimental { coroutines 'enable' } }

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    >
+    <data>
+        <variable
+            name="viewModel"
+            type="propertyguru.androidtest.com.hackernews.data.view_model.CommentViewModel" />
+    </data>
+<android.support.v7.widget.CardView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    style="@style/BaseAppCardView">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/level"
+            android:layout_width="@dimen/padding_text"
+            android:layout_height="match_parent"
+            tools:background="@color/colorAccent"
+            tools:visibility="visible" />
+
+        <LinearLayout
+            android:id="@+id/content"
+            android:layout_marginTop="10dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingLeft="@dimen/flat_card_horizontal_margin"
+            android:paddingRight="@dimen/flat_card_horizontal_margin">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/author"
+                    style="@style/textSubtitleStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:paddingRight="0dp"
+                    android:textColor="@color/colorAccent"
+                    android:textStyle="bold"
+                    tools:text="@{viewModel.model.author}" />
+
+                <TextView
+                    android:id="@+id/posted"
+                    style="@style/textSubtitleStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center_vertical"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:paddingRight="0dp"
+                    tools:text="@{viewModel.prettyDate}" />
+
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="@dimen/padding"
+                android:paddingLeft="@dimen/padding"
+                android:paddingRight="@dimen/padding"
+                android:paddingTop="@dimen/padding"
+                android:textIsSelectable="true"
+                tools:text="@{viewModel.formattedText}" />
+
+
+            <LinearLayout
+                android:id="@+id/button_view_replies"
+                android:layout_width="wrap_content"
+                android:layout_height="?attr/listPreferredItemHeightSmall"
+                android:foreground="?attr/selectableItemBackground"
+                android:layout_marginBottom="10dp"
+                android:orientation="horizontal"
+                android:layout_gravity="center"
+                tools:visibility="@{viewModel.viewChildCommentsVisibility}">
+
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="@{String.format(@string/view_comments, viewModel.model.kids.size())}"
+                    android:onClick="@{viewModel.onClick}"
+                    android:id="@+id/view_replies"
+                    android:textStyle="bold"
+                    android:layout_gravity="center"
+                    android:drawablePadding="@dimen/padding"
+                    />
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    app:srcCompat="@drawable/ic_sub_comment_24dp" />
+
+
+            </LinearLayout>
+
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</android.support.v7.widget.CardView>
+</layout>

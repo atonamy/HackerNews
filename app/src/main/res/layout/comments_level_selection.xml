@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+    <data>
+        <variable
+            name="viewModel"
+            type="propertyguru.androidtest.com.hackernews.data.view_model.CommentsViewModel" />
+    </data>
+<Spinner
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center_horizontal"
+    android:spinnerMode="dropdown"
+    android:id="@+id/spinner"
+    android:popupBackground="@color/icon_tint_normal"
+    app:adapter="@{viewModel.commentsLevelAdapter}"
+    android:selectedItemPosition="@={viewModel.currentCommentLevel}"
+    />
+</layout>
