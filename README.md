@@ -9,7 +9,7 @@ Unit tests are provided (including stubs/mocks)
 Minimum API: 16 (can be lower to 11 teoretically, not tested)
 
 ## Libraries Used
-Dagger2, Coroutines, Anko, Retrofi2, OkHttp3, Realm DB, Gson, Custom Tabs, Leak Canary, Mockito, Awaitility, Espresso
+Data Binding, Dagger2, Coroutines, Anko, Retrofi2, OkHttp3, Realm DB, Gson, Custom Tabs, Leak Canary, Mockito, Awaitility, Espresso
 
 ## Features
 * Download stories and comments in background (using parallel execution)
