@@ -41,11 +41,10 @@ class CommentsDataHelper(defaultMessage: String) {
     }
 
     var loadedComments = 0
-    var totalComments: Int? = null
+    val totalComments: Int?
     get() {
         return if (currentComment != null) currentComment?.kids?.size else currentStory?.kids?.size
     }
-    private set
 
     var contract = object: Contract {
         override fun onCommentsLevelChanged(level: Int) {}
