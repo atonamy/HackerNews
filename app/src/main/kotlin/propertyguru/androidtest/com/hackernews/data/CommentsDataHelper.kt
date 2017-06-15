@@ -199,7 +199,19 @@ class CommentsDataHelper(defaultMessage: String) {
         }
     }
 
+    private inline fun reload(comments: MutableList<Comment>, isSameCommentsThread: () -> Boolean,
+                              reload: () -> Unit) {
+        comments.clear()
+        if(isSameCommentsThread()) {
+            Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${comments.size}, total: $totalComments, loaded: $loadedComments")
+            reload()
+        }
+
+    }
+
     private fun populateComments(cs: Story?, cc: Comment?, comments: List<Comment>, done: Boolean) {
+
+        val isSameCommentsThread: () -> Boolean = { (currentStory == cs && currentComment == cc) }
         loadedComments += comments.size
         cs?.comments?.addAll(comments)
         cc?.comments?.addAll(comments)
@@ -215,7 +227,7 @@ class CommentsDataHelper(defaultMessage: String) {
             cc?.pendingKids?.remove(it.id)
         }
 
-        if(currentStory == cs && currentComment == cc)
+        if(isSameCommentsThread())
             contract.populateComments(comments)
         if(done &&
                 (cc != null && loadedComments == totalComments &&
@@ -224,23 +236,13 @@ class CommentsDataHelper(defaultMessage: String) {
                         cs.comments.size == totalComments)) {
             cs?.fullyLoaded = true
             cc?.fullyLoaded = true
-            if(currentStory == cs && currentComment == cc)
+            if(isSameCommentsThread())
                 contract.done()
         }
-        else if(done && cc != null) {
-            cc.comments.clear()
-            if(currentStory == cs && currentComment == cc) {
-                Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cc.comments.size}, total: $totalComments, loaded: $loadedComments")
-                loadComments(cc, false)
-            }
-        }
-        else if(done && cs != null) {
-            cs.comments.clear()
-            if(currentStory == cs && currentComment == cc) {
-                Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cs.comments.size}, total: $totalComments, loaded: $loadedComments")
-                loadTopLevelComments(cs)
-            }
-        }
+        else if(done && cc != null)
+            reload(cc.comments, isSameCommentsThread){ loadComments(cc, false) }
+        else if(done && cs != null)
+            reload(cs.comments, isSameCommentsThread){ loadTopLevelComments(cs) }
     }
 
     fun resume() {
