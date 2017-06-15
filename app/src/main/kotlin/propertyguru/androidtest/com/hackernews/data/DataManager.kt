@@ -39,6 +39,10 @@ open class DataManager(private val defaultMessage: String = "") {
 
     var onError: (message: String) -> Unit= {}
     var onSuspended: (items: BlockingQueue<Long>, parameter: Any?) -> Unit = {_, _ -> }
+    private val doSuspend: (items: BlockingQueue<Long>, parameter: Any?) -> Unit = {items, parameter ->
+        Log.d(DataManager::class.java.simpleName, "suspend items: " + items.size)
+        launch(UI) { onSuspended(items, parameter) }
+    }
     private val error: (message: String) -> Unit= {
         launch(UI){
             onError(it)
@@ -192,15 +196,14 @@ open class DataManager(private val defaultMessage: String = "") {
                             Log.d(DataManager::class.java.simpleName, "result items: " + it.size)
                             launch(UI) { result(getItemsResult(it, pendingItems!!), false) }
                         }
-                        else if(suspendedItemsIds != null) {
+                        else {
+                            if(suspendedItemsIds != null) {
                                 val temp = LinkedBlockingQueue<Long>(it.keys)
                                 temp.addAll(suspendedItemsIds!!)
                                 suspendedItemsIds?.clear()
                                 suspendedItemsIds = temp
-                        }
-                        else {
-                            Log.d(DataManager::class.java.simpleName, "suspend items: " + it.keys.size)
-                            launch(UI) { onSuspended(LinkedBlockingQueue<Long>(it.keys), paramJob?.parameter) }
+                            }
+                            doSuspend(LinkedBlockingQueue<Long>(it.keys), paramJob?.parameter)
                         }
                     }, {
                         try {
