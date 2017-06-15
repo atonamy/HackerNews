@@ -125,9 +125,12 @@ class CommentsDataHelper(defaultMessage: String) {
         return false
     }
 
-    private fun ifEmptyResult(size: Int) {
-        if(size == 0)
+    private fun ifEmptyResult(size: Int): Boolean {
+        if(size == 0) {
             contract.onEmptyResult()
+            return true
+        }
+        return false
     }
 
     private inline fun load(kids:  List<Long>,
@@ -148,7 +151,8 @@ class CommentsDataHelper(defaultMessage: String) {
     }
 
     fun loadTopLevelComments(story: Story) {
-        ifEmptyResult(story.kids.size)
+        if(ifEmptyResult(story.kids.size))
+            return
 
         currentComment = null
         currentStory = story
@@ -165,7 +169,8 @@ class CommentsDataHelper(defaultMessage: String) {
     }
 
     fun loadComments(parent: Comment, newThread: Boolean = true) {
-        ifEmptyResult(parent.kids.size)
+        if(ifEmptyResult(parent.kids.size))
+            return
 
         currentStory = null
         currentComment = parent
