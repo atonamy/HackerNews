@@ -33,6 +33,7 @@ class CommentsDataHelper(defaultMessage: String) {
     private var currentKids: BlockingQueue<Long> = LinkedBlockingQueue<Long>()
     private var suspended = false
     private var commentsLevel = 0
+    private var resumeLoading: Boolean = false
 
     init {
         dataManager.onError = {
@@ -146,7 +147,7 @@ class CommentsDataHelper(defaultMessage: String) {
         loadedComments = kids.size - pk.size
         if(comments.size > 0)
             contract.populateComments(comments)
-        suspended = true
+        resumeLoading = true
         resume()
     }
 
@@ -192,9 +193,8 @@ class CommentsDataHelper(defaultMessage: String) {
 
 
     fun suspend() {
-        val task = currentTask
-        if(task != null) {
-            dataManager.suspend(task)
+        if(currentTask != null) {
+            currentTask?.cancel()
             suspended = true
         }
     }
@@ -246,9 +246,12 @@ class CommentsDataHelper(defaultMessage: String) {
     }
 
     fun resume() {
-        if(!suspended)
+        if(!suspended && !resumeLoading)
             return
+        else if(suspended)
+            currentKids = if (currentComment != null) currentComment!!.pendingKids else currentStory!!.pendingKids
         suspended = false
+        resumeLoading = false
         val cs = currentStory
         val cc = currentComment
         currentTask = dataManager.loadComments(currentKids) { comments, done ->
