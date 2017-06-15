@@ -144,7 +144,7 @@ open class DataManager(private val defaultMessage: String = "") {
                     else
                         cancel = true
 
-                    if(cancel || ids.size == 0 && !parentTask.isActive)
+                    if((cancel || !parentTask.isActive) && itemsOutput.size > 0)
                         populateItems()
                 } else if(itemsOutput.size > 0)
                     populateItems()

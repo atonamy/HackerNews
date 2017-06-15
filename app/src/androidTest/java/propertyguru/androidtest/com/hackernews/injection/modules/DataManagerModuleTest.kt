@@ -79,7 +79,7 @@ class DataManagerModuleTest: DataManagerModule() {
         return jsonObject
     }
 
-    inline fun convertStreamToString(`is`: InputStream): String {
+    fun convertStreamToString(`is`: InputStream): String {
         val s = Scanner(`is`).useDelimiter("\\A")
         return if (s.hasNext()) s.next() else ""
     }

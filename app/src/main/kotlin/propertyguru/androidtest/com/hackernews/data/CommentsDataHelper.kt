@@ -1,5 +1,6 @@
 package propertyguru.androidtest.com.hackernews.data
 
+import android.util.Log
 import io.realm.RealmList
 import propertyguru.androidtest.com.hackernews.data.model.Comment
 import propertyguru.androidtest.com.hackernews.data.model.Story
@@ -39,7 +40,6 @@ class CommentsDataHelper(defaultMessage: String) {
         }
 
         dataManager.onSuspended = { items, parameter ->
-            val parameter = parameter
             if (parameter != null) {
                 when (parameter) {
                     is Story -> adjustKids(items, parameter.pendingKids, {parameter.pendingKids = it})
@@ -199,44 +199,56 @@ class CommentsDataHelper(defaultMessage: String) {
         }
     }
 
+    private fun populateComments(cs: Story?, cc: Comment?, comments: List<Comment>, done: Boolean) {
+        loadedComments += comments.size
+        cs?.comments?.addAll(comments)
+        cc?.comments?.addAll(comments)
+
+        comments.forEach {
+            if(cs != null)
+                it.parentStory = cs
+            else if(cc != null) {
+                it.parentComment = cc
+                it.parentStory = cc.parentStory
+            }
+            cs?.pendingKids?.remove(it.id)
+            cc?.pendingKids?.remove(it.id)
+        }
+
+        if(currentStory == cs && currentComment == cc)
+            contract.populateComments(comments)
+        if(done &&
+                (cc != null && loadedComments == totalComments &&
+                        cc.comments.size == totalComments) ||
+                (cs != null && loadedComments == totalComments &&
+                        cs.comments.size == totalComments)) {
+            cs?.fullyLoaded = true
+            cc?.fullyLoaded = true
+            if(currentStory == cs && currentComment == cc)
+                contract.done()
+        }
+        else if(done && cc != null) {
+            Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cc.comments.size}, total: $totalComments, loaded: $loadedComments")
+            cc.comments.clear()
+            loadComments(cc, false)
+        }
+        else if(done && cs != null) {
+            Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cs.comments.size}, total: $totalComments, loaded: $loadedComments")
+            cs.comments.clear()
+            loadTopLevelComments(cs)
+        }
+    }
+
     fun resume() {
         if(!suspended)
             return
         suspended = false
+        val cs = currentStory
+        val cc = currentComment
         currentTask = dataManager.loadComments(currentKids) { comments, done ->
-            loadedComments += comments.size
-            comments.forEach {
-                if(currentStory != null)
-                    it.parentStory = currentStory
-                else if(currentComment != null) {
-                    it.parentComment = currentComment
-                    it.parentStory = currentComment!!.parentStory
-                }
-                currentStory?.pendingKids?.remove(it.id)
-                currentComment?.pendingKids?.remove(it.id)
-            }
-            currentStory?.comments?.addAll(comments)
-            currentComment?.comments?.addAll(comments)
-            contract.populateComments(comments)
-            if(done &&
-                    (currentComment != null && loadedComments == totalComments &&
-                            currentComment!!.comments.size == totalComments) ||
-                    (currentStory != null && loadedComments == totalComments &&
-                            currentStory!!.comments.size == totalComments)) {
-                currentStory?.fullyLoaded = true
-                currentComment?.fullyLoaded = true
-                contract.done()
-            }
-            else if(done && currentComment != null) {
-                currentComment?.comments?.clear()
-                loadComments(currentComment!!)
-            }
-            else if(done && currentStory != null) {
-                currentStory?.comments?.clear()
-                loadTopLevelComments(currentStory!!)
-            }
+            populateComments(cs, cc, comments, done)
         }
-        currentTask?.parameter = if(currentComment != null) currentComment!! else currentStory!!
+        currentTask?.parameter = if(cc != null) cc else cs
     }
 
     fun release() {
