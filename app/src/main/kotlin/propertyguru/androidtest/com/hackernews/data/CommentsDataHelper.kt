@@ -1,7 +1,6 @@
 package propertyguru.androidtest.com.hackernews.data
 
-import android.content.Context
-import kotlinx.coroutines.experimental.Job
+import io.realm.RealmList
 import propertyguru.androidtest.com.hackernews.data.model.Comment
 import propertyguru.androidtest.com.hackernews.data.model.Story
 import java.util.concurrent.BlockingQueue
@@ -27,7 +26,7 @@ class CommentsDataHelper(defaultMessage: String) {
     }
 
     val dataManager = CommentsDataManager(defaultMessage)
-    private var currentCommentsTask: Job? = null
+    private var currentTask: DataManager.ParamJob? = null
     private var currentStory: Story? = null
     private var currentComment: Comment? = null
     private var currentKids: BlockingQueue<Long> = LinkedBlockingQueue<Long>()
@@ -37,6 +36,16 @@ class CommentsDataHelper(defaultMessage: String) {
     init {
         dataManager.onError = {
             onError(it)
+        }
+
+        dataManager.onSuspended = { items, parameter ->
+            val parameter = parameter
+            if (parameter != null) {
+                when (parameter) {
+                    is Story -> adjustKids(items, parameter.pendingKids, {parameter.pendingKids = it})
+                    is Comment -> adjustKids(items, parameter.pendingKids, {parameter.pendingKids = it})
+                }
+            }
         }
     }
 
@@ -64,6 +73,15 @@ class CommentsDataHelper(defaultMessage: String) {
         contract.onError(it)
     }
 
+    private inline fun adjustKids(items: BlockingQueue<Long>,
+                                  kids: BlockingQueue<Long>,
+                                  set: (kids: BlockingQueue<Long>) -> Unit) {
+        val temp = LinkedBlockingQueue<Long>(items)
+        temp.addAll(kids)
+        kids.clear()
+        set(temp)
+    }
+
     fun changeCommentsLevel(level: Int){
         if(level == 0) {
             commentsLevel = level
@@ -89,75 +107,87 @@ class CommentsDataHelper(defaultMessage: String) {
         }
     }
 
-    fun loadTopLevelComments(story: Story) {
-        if(story.kids.size == 0) {
-            contract.onEmptyResult()
-            return
-        }
-        currentComment = null
-        currentStory = story
-        currentCommentsTask?.cancel()
+    private fun reset(fullyLoaded: Boolean, comments: RealmList<Comment>,
+                      body: () -> Unit = {}): Boolean {
+        currentTask?.cancel()
         dataManager.reset()
         contract.reset()
 
-        if(story.fullyLoaded) {
-            loadedComments = story.comments.size
-            contract.populateComments(story.comments)
+        body()
+
+        if(fullyLoaded) {
+            loadedComments = comments.size
+            contract.populateComments(comments)
             contract.done()
-            return
+            return true
         }
 
-        if(story.pendingKids.size == 0)
-            story.pendingKids = LinkedBlockingQueue<Long>(story.kids)
+        return false
+    }
 
-        currentKids = story.pendingKids
-        loadedComments = story.kids.size - story.pendingKids.size
-        if(story.comments.size > 0)
-            contract.populateComments(story.comments)
+    private fun ifEmptyResult(size: Int) {
+        if(size == 0)
+            contract.onEmptyResult()
+    }
+
+    private inline fun load(kids:  List<Long>,
+                     pKids: BlockingQueue<Long>,
+                     comments: RealmList<Comment>,
+                     initPKids: (kids: LinkedBlockingQueue<Long>) -> BlockingQueue<Long>) {
+
+        var pk = pKids
+        if(pk.size == 0)
+            pk = initPKids(LinkedBlockingQueue<Long>(kids))
+
+        currentKids = pk
+        loadedComments = kids.size - pk.size
+        if(comments.size > 0)
+            contract.populateComments(comments)
         suspended = true
         resume()
     }
 
-    fun loadComments(parent: Comment, newThread: Boolean = true) {
-        if(parent.kids.size == 0) {
-            contract.onEmptyResult()
+    fun loadTopLevelComments(story: Story) {
+        ifEmptyResult(story.kids.size)
+
+        currentComment = null
+        currentStory = story
+
+        if(reset(story.fullyLoaded, story.comments))
             return
+
+
+        load(story.kids, story.pendingKids, story.comments) {
+            story.pendingKids = it
+            it
         }
+
+    }
+
+    fun loadComments(parent: Comment, newThread: Boolean = true) {
+        ifEmptyResult(parent.kids.size)
 
         currentStory = null
         currentComment = parent
-        currentCommentsTask?.cancel()
-        dataManager.reset()
-        contract.reset()
 
-        if(newThread) {
-            commentsLevel++
-            contract.onCommentsLevelChanged(commentsLevel)
-            contract.addThread(parent.author)
-        }
-
-        if(parent.fullyLoaded) {
-            loadedComments = parent.comments.size
-            contract.populateComments(parent.comments)
-            contract.done()
+        if(reset(parent.fullyLoaded, parent.comments) {
+            if(newThread) {
+                commentsLevel++
+                contract.onCommentsLevelChanged(commentsLevel)
+                contract.addThread(parent.author)
+            }
+        })
             return
+
+        load(parent.kids, parent.pendingKids, parent.comments) {
+            parent.pendingKids = it
+            it
         }
-
-        if(parent.pendingKids.size == 0)
-            parent.pendingKids = LinkedBlockingQueue<Long>(parent.kids)
-
-
-        currentKids = parent.pendingKids
-        loadedComments = parent.kids.size - parent.pendingKids.size
-        if(parent.comments.size > 0)
-            contract.populateComments(parent.comments)
-        suspended = true
-        resume()
     }
 
 
     fun suspend() {
-        val task = currentCommentsTask
+        val task = currentTask
         if(task != null) {
             dataManager.suspend(task)
             suspended = true
@@ -168,14 +198,14 @@ class CommentsDataHelper(defaultMessage: String) {
         if(!suspended)
             return
         suspended = false
-        currentCommentsTask = dataManager.loadComments(currentKids) { comments, done ->
+        currentTask = dataManager.loadComments(currentKids) { comments, done ->
             loadedComments += comments.size
             comments.forEach {
                 if(currentStory != null)
                     it.parentStory = currentStory
                 else if(currentComment != null) {
                     it.parentComment = currentComment
-                    it.parentStory = currentComment?.parentStory
+                    it.parentStory = currentComment!!.parentStory
                 }
                 currentStory?.pendingKids?.remove(it.id)
                 currentComment?.pendingKids?.remove(it.id)
@@ -200,12 +230,12 @@ class CommentsDataHelper(defaultMessage: String) {
                 currentStory?.comments?.clear()
                 loadTopLevelComments(currentStory!!)
             }
-
         }
+        currentTask?.parameter = if(currentComment != null) currentComment!! else currentStory!!
     }
 
     fun release() {
-        currentCommentsTask?.cancel()
+        currentTask?.cancel()
     }
 
 }

@@ -13,7 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 class CommentsDataManager(defaultMessage: String): DataManager(defaultMessage) {
 
-    fun loadComments(kids: BlockingQueue<Long>, result: (comments: List<Comment>, done: Boolean) -> Unit): Job {
+    fun loadComments(kids: BlockingQueue<Long>, result: (comments: List<Comment>, done: Boolean) -> Unit): ParamJob {
 
         return loadItems({
             doReset()

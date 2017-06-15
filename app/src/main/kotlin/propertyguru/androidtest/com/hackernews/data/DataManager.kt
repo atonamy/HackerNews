@@ -20,6 +20,16 @@ import kotlin.collections.ArrayList
  */
 open class DataManager(private val defaultMessage: String = "") {
 
+
+    class ParamJob(val job: Job) {
+
+        var parameter: Any? = null
+
+        fun cancel() {
+            job.cancel()
+        }
+    }
+
     @Inject
     lateinit var hackerNewsApi: HackerNewsApi
 
@@ -28,6 +38,7 @@ open class DataManager(private val defaultMessage: String = "") {
     }
 
     var onError: (message: String) -> Unit= {}
+    var onSuspended: (items: BlockingQueue<Long>, parameter: Any?) -> Unit = {_, _ -> }
     private val error: (message: String) -> Unit= {
         launch(UI){
             onError(it)
@@ -43,7 +54,7 @@ open class DataManager(private val defaultMessage: String = "") {
     protected var suspendedItemsIds: BlockingQueue<Long>? = null
 
 
-    fun suspend(task: Job) {
+    fun suspend(task: ParamJob) {
         if(itemsIds != null && itemsIds!!.size > 0) {
             suspendedItemsIds = LinkedBlockingQueue<Long>(itemsIds)
             itemsIds?.clear()
@@ -76,10 +87,8 @@ open class DataManager(private val defaultMessage: String = "") {
         try {
             val items = itemsOutput()
             reset(ConcurrentHashMap<Long, T>())
-            if (items.size > 0) {
-                Log.d(DataManager::class.java.simpleName, "drop items: ${items.size}")
+            if (items.size > 0)
                 result(items)
-            }
             Log.d(DataManager::class.java.simpleName, "drop items: ${items.size}")
         } finally {
             singleThread.unlock()
@@ -133,7 +142,8 @@ open class DataManager(private val defaultMessage: String = "") {
 
                     if(cancel || ids.size == 0 && !parentTask.isActive)
                         populateItems()
-                }
+                } else if(itemsOutput.size > 0)
+                    populateItems()
             })
 
             if (tasks.size == maxPreloadItems || !isActive || !iterator.hasNext()) {
@@ -152,13 +162,13 @@ open class DataManager(private val defaultMessage: String = "") {
         itemsOutput
     }
 
-
     protected fun <T> loadItems(kids: suspend () -> BlockingQueue<Long>?,
                               getItem: (id: Long) -> Response<T>?,
                               result: (items: List<T>, done: Boolean) -> Unit,
-                              failed: () -> Unit = {}): Job {
+                              failed: () -> Unit = {}): ParamJob {
         var task: Deferred<MutableMap<Long, T>>? = null
         var exception = false
+        var paramJob: ParamJob? = null
         val job = launch(UI) {
             var kidsItems: BlockingQueue<Long>? = null
             var pendingItems: BlockingQueue<Long>? = null
@@ -182,13 +192,15 @@ open class DataManager(private val defaultMessage: String = "") {
                             Log.d(DataManager::class.java.simpleName, "result items: " + it.size)
                             launch(UI) { result(getItemsResult(it, pendingItems!!), false) }
                         }
-                        else {
-                            if(suspendedItemsIds != null) {
+                        else if(suspendedItemsIds != null) {
                                 val temp = LinkedBlockingQueue<Long>(it.keys)
                                 temp.addAll(suspendedItemsIds!!)
                                 suspendedItemsIds?.clear()
                                 suspendedItemsIds = temp
-                            }
+                        }
+                        else {
+                            Log.d(DataManager::class.java.simpleName, "suspend items: " + it.keys.size)
+                            launch(UI) { onSuspended(LinkedBlockingQueue<Long>(it.keys), paramJob?.parameter) }
                         }
                     }, {
                         try {
@@ -224,8 +236,8 @@ open class DataManager(private val defaultMessage: String = "") {
             Log.d(DataManager::class.java.simpleName, "items completed")
             task?.cancel()
         }
-
-        return job
+        paramJob = ParamJob(job)
+        return paramJob
     }
 
     private fun <T> getItemsResult(items: MutableMap<Long, T>, pendingItems: BlockingQueue<Long>): List<T> {

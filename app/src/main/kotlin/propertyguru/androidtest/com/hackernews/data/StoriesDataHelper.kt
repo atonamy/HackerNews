@@ -18,7 +18,7 @@ class StoriesDataHelper(defaultMessage: String) {
     }
 
     val dataManager = StoriesDataManager(defaultMessage)
-    private var currentStoryTask: Job? = null
+    private var currentStoryTask: DataManager.ParamJob? = null
     private var suspended = false
     var storiesLoaded = false
     var totalStories = 0

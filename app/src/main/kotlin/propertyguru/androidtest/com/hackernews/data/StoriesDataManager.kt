@@ -33,7 +33,7 @@ class StoriesDataManager(private val defaultMessage: String): DataManager(defaul
     }
 
     fun loadStories(wholeStories: (total: Int) -> Unit,
-                    result: (stories: List<Story>, done: Boolean) -> Unit): Job {
+                    result: (stories: List<Story>, done: Boolean) -> Unit): ParamJob {
 
         return loadItems({
             doReset()
