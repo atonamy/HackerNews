@@ -228,14 +228,18 @@ class CommentsDataHelper(defaultMessage: String) {
                 contract.done()
         }
         else if(done && cc != null) {
-            Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cc.comments.size}, total: $totalComments, loaded: $loadedComments")
             cc.comments.clear()
-            loadComments(cc, false)
+            if(currentStory == cs && currentComment == cc) {
+                Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cc.comments.size}, total: $totalComments, loaded: $loadedComments")
+                loadComments(cc, false)
+            }
         }
         else if(done && cs != null) {
-            Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cs.comments.size}, total: $totalComments, loaded: $loadedComments")
             cs.comments.clear()
-            loadTopLevelComments(cs)
+            if(currentStory == cs && currentComment == cc) {
+                Log.e(CommentsDataHelper::class.java.simpleName, "comments: ${cs.comments.size}, total: $totalComments, loaded: $loadedComments")
+                loadTopLevelComments(cs)
+            }
         }
     }
 
