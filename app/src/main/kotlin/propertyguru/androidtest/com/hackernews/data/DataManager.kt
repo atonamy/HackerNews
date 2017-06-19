@@ -30,6 +30,10 @@ open class DataManager(private val defaultMessage: String = "") {
         }
     }
 
+    companion object {
+        val maxPreloadItems = 25
+    }
+
     @Inject
     lateinit var hackerNewsApi: HackerNewsApi
 
@@ -51,7 +55,6 @@ open class DataManager(private val defaultMessage: String = "") {
 
 
     private val singleThread = Mutex()
-    private val maxPreloadItems = 25
     protected var reset = false
 
     protected var itemsIds: BlockingQueue<Long>? = null
@@ -162,7 +165,6 @@ open class DataManager(private val defaultMessage: String = "") {
                 tasks.clear()
             }
         }
-
         itemsOutput
     }
 
@@ -220,7 +222,7 @@ open class DataManager(private val defaultMessage: String = "") {
                     })
                     items = task!!.await()
                 } catch(ex: Exception) {
-                    if(ex !is CancellationException) {
+                    if(ex !is CancellationException) {120
                         error(ex.message ?: defaultMessage)
                         exception = true
                     }

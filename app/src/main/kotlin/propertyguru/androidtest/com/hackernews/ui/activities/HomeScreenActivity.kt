@@ -21,6 +21,10 @@ import propertyguru.androidtest.com.hackernews.ui.adapters.StoriesAdapter
 open class HomeScreenActivity : AppCompatActivity(), StoriesViewModel.Contract, StoryViewModel.Contract,
         StoriesDataHelper.Contract {
 
+        companion object {
+            var suspendStart = false
+        }
+
         val storiesHelper: StoriesDataHelper by lazy {
             StoriesDataHelper(getString(R.string.error_message))
         }
@@ -28,8 +32,15 @@ open class HomeScreenActivity : AppCompatActivity(), StoriesViewModel.Contract, 
         lateinit var viewModel: StoriesViewModel
 
 
+
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
+
+            if(!suspendStart)
+                start()
+        }
+
+        fun start() {
             initView()
         }
 

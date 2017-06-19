@@ -2,16 +2,13 @@ package propertyguru.androidtest.com.hackernews.main
 
 import android.support.test.rule.ActivityTestRule
 import android.support.test.runner.AndroidJUnit4
-import org.awaitility.Awaitility
 import org.awaitility.Awaitility.await
 import org.junit.Before
 
-import org.junit.Assert.*
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import propertyguru.androidtest.com.hackernews.injection.components.DaggerTestApiComponent
 import propertyguru.androidtest.com.hackernews.injection.modules.DataManagerModuleTest
 import propertyguru.androidtest.com.hackernews.network.api.HackerNewsApi
@@ -28,20 +25,34 @@ import javax.inject.Inject
 class HomeScreenActivityTest {
 
     @get:Rule
-    val rule: ActivityTestRule<HomeScreenActivity> = ActivityTestRule(HomeScreenActivity::class.java)
+    val rule: ActivityTestRule<HomeScreenActivity> = object: ActivityTestRule<HomeScreenActivity>(HomeScreenActivity::class.java) {
+        override fun beforeActivityLaunched() {
+            HomeScreenActivity.suspendStart = true
+            DataManagerModuleTest.counter = 3
+        }
+    }
 
+
+    @Inject
+    lateinit var api: HackerNewsApi
     lateinit var activity: HomeScreenActivity
 
     @Before
     fun setUp() {
+        DaggerTestApiComponent.builder().dataManagerModule(DataManagerModuleTest()).build().inject(this)
         activity = rule.activity
+        activity.storiesHelper.dataManager.hackerNewsApi = api
     }
 
 
     @Test
     @Throws(Exception::class)
     fun testDisplayStories() {
+        activity.runOnUiThread {
+            activity.start()
+        }
         await().atMost(30, TimeUnit.SECONDS).until(storiesLoaded())
+        DataManagerModuleTest.counter = 0
     }
 
     @Ignore
@@ -50,7 +61,7 @@ class HomeScreenActivityTest {
             @Throws(Exception::class)
             override fun call(): Boolean {
                 val adapter = activity.viewModel.adapter
-                return (adapter != null && adapter.itemCount > 0)
+                return (adapter != null && adapter.itemCount == DataManagerModuleTest.currentStories.size)
             }
         }
     }

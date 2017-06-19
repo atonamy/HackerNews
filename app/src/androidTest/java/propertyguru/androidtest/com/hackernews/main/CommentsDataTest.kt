@@ -1,10 +1,8 @@
 package propertyguru.androidtest.com.hackernews.main
 
 import android.support.test.runner.AndroidJUnit4
-import com.nhaarman.mockito_kotlin.check
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
+import io.realm.RealmList
 import org.awaitility.Awaitility
 import org.junit.Before
 import org.junit.Test
@@ -20,14 +18,18 @@ import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import org.junit.Assert.*
+import org.junit.FixMethodOrder
 import org.junit.Ignore
 import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
+import propertyguru.androidtest.com.hackernews.data.DataManager
 import propertyguru.androidtest.com.hackernews.data.model.Comment
 
 /**
  * Created by archie on 12/6/17.
  */
 @RunWith(AndroidJUnit4::class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class CommentsDataTest {
     @Inject
     lateinit var api: HackerNewsApi
@@ -39,60 +41,23 @@ class CommentsDataTest {
 
     val formatter: SimpleDateFormat = SimpleDateFormat("dd/MM/yyyy/HH:mm:ss")
 
-    val testStory = Story().apply {
-        author = "raldi"
-        url = "https://en.wikipedia.org/wiki/Area_code_710"
-        title = "Area code 710"
-        time = formatter.parse("11/06/2017/04:33:36")
-        kids = listOf(14529448, 14531272)
-        score = "273"
-        id = 14529079
-        descendants = 58
-    }
-
     @Before
     fun setup() {
         MockitoAnnotations.initMocks(this)
         DaggerTestApiComponent.builder().dataManagerModule(DataManagerModuleTest()).build().inject(this)
+        whenever(contract.initCurrentStory()).doAnswer {
+            getStory()!!
+        }
         commentsDataHelper.dataManager.hackerNewsApi = api
         commentsDataHelper.contract = contract
-        whenever(contract.initCurrentStory()).thenReturn(testStory)
     }
 
+    //Test correct handle error response from API top comments
     @Test
     @Throws(Exception::class)
-    fun onStartLoadComments() {
-        commentsDataHelper.loadTopLevelComments(testStory)
-        verify(contract).reset()
-        Awaitility.await().atMost(5, TimeUnit.SECONDS).until(loadedCommentsSize())
-        verify(contract).populateComments(check {
-            verifyTopLevelComments(it)
-        })
-        verify(contract).done()
-        testLevelCommentChange()
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun onEmptyLoadComments() {
+    fun on01ErrorTopCommentTestResult() {
         commentsDataHelper.loadTopLevelComments(Story().apply {
-            author = "raldi"
-            url = "https://en.wikipedia.org/wiki/Area_code_710"
-            title = "Area code 710"
-            time = formatter.parse("11/06/2017/04:33:36")
-            score = "273"
-            id = 14529079
-            descendants = 58
-        })
-        verify(contract).onEmptyResult()
-
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun onErrorLoadComments() {
-        commentsDataHelper.loadTopLevelComments(Story().apply {
-            author = "error author"
+            author = "some author"
             url = "https://test-error.com"
             title = "Testing error"
             time = formatter.parse("11/06/2017/04:33:36")
@@ -105,59 +70,240 @@ class CommentsDataTest {
         verify(contract).onError("Response.error()")
     }
 
+
+    //Test correct handle error response from API sub comments
     @Test
     @Throws(Exception::class)
-    fun onSubLoadComments() {
+    fun on02ErrorCommentTestResult() {
         commentsDataHelper.loadComments(Comment().apply {
-            author = "b0rsuk"
-            id = 14531272
-            kids = listOf(14531275)
-            parent = 14529079
-            time = formatter.parse("11/06/2017/00:30:12")
+            author = "some author"
+            text = "Testing error"
+            time = formatter.parse("11/06/2017/04:33:36")
+            kids = listOf(14531277)
         })
-        verify(contract).reset()
-        verify(contract).addThread("b0rsuk")
-        Awaitility.await().atMost(5, TimeUnit.SECONDS).until(loadedCommentsSize())
-        verify(contract).populateComments(check {
-            assertEquals(it.size, 1)
-            assertEquals(it[0].author, "blazespin")
-            assertEquals(it[0].id, 14531275)
-            assertEquals(it[0].parent, 14531272)
-        })
-        verify(contract).done()
+        Thread.sleep(2000)
+        verify(contract).onError("Response.error()")
     }
 
-    @Ignore
-    fun verifyTopLevelComments(it: List<Comment>) {
-        assertEquals(it.size, 2)
-        assertEquals(it[0].author, "epistasis")
-        assertEquals(it[0].id, 14529448)
-        assertEquals(it[0].parent, 14529079)
-        assertEquals(it[1].author, "b0rsuk")
-        assertEquals(it[1].id, 14531272)
-        assertEquals(it[1].parent, 14529079)
-        assertEquals(it[1].kids.size, 1)
+
+    //Test correct empty result response from API top comments
+    @Test
+    @Throws(Exception::class)
+    fun on03EmptyTopCommentTestResult() {
+        commentsDataHelper.loadTopLevelComments(Story().apply {
+            author = "some author"
+            url = "https://test-error.com"
+            title = "Testing error"
+            time = formatter.parse("11/06/2017/04:33:36")
+            score = "273"
+            kids = listOf()
+            id = 14530552
+            descendants = 58
+        })
+        Thread.sleep(2000)
+        verify(contract).onEmptyResult()
     }
 
-    @Ignore
-    fun testLevelCommentChange() {
+    //Test correct empty result response from API sub comments
+    @Test
+    @Throws(Exception::class)
+    fun on04EmptyCommentTestResult() {
+        commentsDataHelper.loadComments(Comment().apply {
+            author = "some author"
+            text = "Testing error"
+            time = formatter.parse("11/06/2017/04:33:36")
+            kids = listOf()
+        })
+        Thread.sleep(2000)
+        verify(contract).onEmptyResult()
+    }
+
+    //Test correct top level comments quantity and sequence population from API
+    @Test
+    @Throws(Exception::class)
+    fun on05LoadedTopCommentsTestResult() {
+        var story: Story? = getStory()
+        testLoadedComments(story?.kids, 1, {}) {
+            commentsDataHelper.loadTopLevelComments(story!!)
+        }
+
+    }
+
+    //Test correct top level comments quantity and sequence population with suspend/resume from API
+    @Test
+    @Throws(Exception::class)
+    fun on06LoadedTopCommentsSuspendResumeTestResult() {
+        var story: Story? = getStory()
+        testLoadedComments(story?.kids, 1, {
+            Thread.sleep(1000)
+            commentsDataHelper.suspend()
+            Thread.sleep(500)
+            commentsDataHelper.resume()
+        }) {
+            commentsDataHelper.loadTopLevelComments(story!!)
+        }
+    }
+
+    //Test correct sub comments quantity and sequence population from API
+    @Test
+    @Throws(Exception::class)
+    fun on07LoadedCommentsTestResult() {
+        var comment: Comment? = getComment()
+        testLoadedComments(comment?.kids, 1, {
+            verify(contract).onCommentsLevelChanged(1)
+            verify(contract).addThread("epistasis")
+        }) {
+            commentsDataHelper.loadComments(comment!!)
+        }
+    }
+
+
+    //Test correct sub comments quantity and sequence population from API
+    @Test
+    @Throws(Exception::class)
+    fun on08LoadedCommentsSuspendResumeTestResult() {
+        var comment: Comment? = getComment()
+        testLoadedComments(comment?.kids, 1, {
+            verify(contract).onCommentsLevelChanged(1)
+            verify(contract).addThread("epistasis")
+            Thread.sleep(1000)
+            commentsDataHelper.suspend()
+            Thread.sleep(500)
+            commentsDataHelper.resume()
+        }) {
+            commentsDataHelper.loadComments(comment!!)
+        }
+    }
+
+
+    //Test correct change to top level comments
+    @Test
+    @Throws(Exception::class)
+    fun on09ChangeToTopLevelCommentsTestResult() {
         commentsDataHelper.changeCommentsLevel(0)
+        verify(contract).initCurrentStory()
         verify(contract).clearThreads()
-        verify(contract, times(2)).reset()
-        verify(contract, times(2)).populateComments(check {
-            verifyTopLevelComments(it)
-        })
-        verify(contract, times(2)).done()
+        val story = getStory()
+        testLoadedComments(story!!.kids, 1, {}, {})
+    }
+
+
+    //Test correct change to middle level comments
+    @Test
+    @Throws(Exception::class)
+    fun on10ChangeToSecondLevelCommentsTestResult() {
+        var comment: Comment? = getComment()
+
+        testLoadedComments(comment?.kids, 1, {
+            verify(contract).onCommentsLevelChanged(1)
+            verify(contract).addThread("epistasis")
+        }) {
+            commentsDataHelper.loadComments(comment!!)
+        }
+
+        comment = getSubComment()
+
+        testLoadedComments(comment?.kids, 2, {
+            verify(contract, times(1)).onCommentsLevelChanged(2)
+            verify(contract, times(1)).addThread("b0rsuk")
+        }) {
+            commentsDataHelper.loadComments(comment!!)
+        }
+
+        commentsDataHelper.changeCommentsLevel(1)
+        verify(contract).removeLastThread()
+        verify(contract, times(3)).done()
+    }
+
+
+
+    @Ignore
+    private fun getStory(): Story? {
+        var story: Story? = null
+        for(kid in DataManagerModuleTest.currentStories){
+            val s = api.getStoryItem(kid).execute().body()!!
+            if(s.kids.size > 0) {
+                story = s
+                break;
+            }
+        }
+
+        return story
+    }
+
+    @Ignore
+    private fun getComment(): Comment? {
+        var comment: Comment? = null
+        for(kid in DataManagerModuleTest.currentStories){
+            val s = api.getStoryItem(kid).execute().body()!!
+            if(s.kids.size > 0) {
+                for (subKid in s.kids){
+                    val c = api.getCommentItem(subKid).execute().body()!!
+                    if(c.kids.size > 0)
+                    {
+                        comment = c
+                        break;
+                    }
+                }
+                if(comment != null)
+                    break;
+            }
+        }
+
+        return comment
+    }
+
+    @Ignore
+    private fun getSubComment(): Comment? {
+        var comment: Comment? = null
+        for(kid in DataManagerModuleTest.currentStories){
+            val s = api.getStoryItem(kid).execute().body()!!
+            if(s.kids.size > 0) {
+                for (subKid in s.kids){
+                    val c = api.getCommentItem(subKid).execute().body()!!
+                    if(c.kids.size > 0)
+                    {
+                        comment = api.getCommentItem(c.kids[0]).execute().body()!!
+                        break;
+                    }
+                }
+                if(comment != null)
+                    break;
+            }
+        }
+
+        return comment
     }
 
     @Ignore
     private fun loadedCommentsSize(): Callable<Boolean> {
+
         return object : Callable<Boolean> {
             @Throws(Exception::class)
             override fun call(): Boolean {
-                return commentsDataHelper.loadedComments > 0
+                return (commentsDataHelper.loadedComments == commentsDataHelper.totalComments)
             }
         }
     }
 
+
+    @Ignore
+    private inline fun testLoadedComments(kids: List<Long>?, times: Int, body: () -> Unit,
+                                          load: () -> Unit) {
+        assertNotNull(kids)
+        val allComments  = RealmList<Comment>()
+        load()
+        verify(contract, times(times)).reset()
+        Awaitility.await().atMost(5, TimeUnit.SECONDS).until(loadedCommentsSize())
+        val totalPages = (commentsDataHelper.totalComments!! + DataManager.maxPreloadItems - 1) / DataManager.maxPreloadItems
+        verify(contract, times(totalPages*times)).populateComments(check {
+            allComments.addAll(it)
+        })
+        body()
+        val realSize = allComments.size/(2*times)
+        assertEquals(kids!!.size, realSize)
+        for (i in 0 until kids.size)
+            assertEquals(kids[i], allComments[i+realSize].id)
+        verify(contract, times(times)).done()
+    }
 }

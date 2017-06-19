@@ -15,15 +15,15 @@ class StoriesDataManager(private val defaultMessage: String): DataManager(defaul
 
     private val preloadStoriesIds: Deferred<BlockingQueue<Long>?> get() = async(CommonPool) {
         if(suspendedItemsIds != null && suspendedItemsIds!!.size > 0) {
-            Log.d(DataManager::class.java.simpleName, "return existing pending stories")
+            Log.d(StoriesDataManager::class.java.simpleName, "return existing pending stories")
             suspendedItemsIds
         } else {
             val storiesResult = hackerNewsApi.topStories.execute()
             if (storiesResult.isSuccessful) {
-                Log.d(DataManager::class.java.simpleName, "return new stories")
+                Log.d(StoriesDataManager::class.java.simpleName, "return new stories")
                 LinkedBlockingQueue<Long>(storiesResult.body())
             } else {
-                Log.e(DataManager::class.java.simpleName, storiesResult.message() +
+                Log.e(StoriesDataManager::class.java.simpleName, storiesResult.message() +
                         storiesResult.errorBody().toString())
                 error(storiesResult.message() ?: storiesResult.errorBody()?.string() ?:
                         defaultMessage)

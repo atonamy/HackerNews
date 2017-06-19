@@ -29,15 +29,24 @@ import propertyguru.androidtest.com.hackernews.ui.helpers.CustomTabsHelper
 open class ItemScreenActivity : AppCompatActivity(), CommentsViewModel.Contract, CommentViewModel.Contract,
     CommentsDataHelper.Contract {
 
-    lateinit var viewModel: CommentsViewModel
-    lateinit var storyModel: Story
-    val commentsHelper: CommentsDataHelper by lazy {
-        CommentsDataHelper(getString(R.string.error_message))
-    }
+        companion object {
+            var suspendStart = false
+        }
+
+        lateinit var viewModel: CommentsViewModel
+        lateinit var storyModel: Story
+        val commentsHelper: CommentsDataHelper by lazy {
+            CommentsDataHelper(getString(R.string.error_message))
+        }
 
 
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
+            if(!suspendStart)
+                start()
+        }
+
+        fun start() {
             initView()
             initActionBar()
         }

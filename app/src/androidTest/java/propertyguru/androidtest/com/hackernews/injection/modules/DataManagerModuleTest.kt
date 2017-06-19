@@ -7,6 +7,7 @@ import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
 import android.support.test.InstrumentationRegistry
+import android.util.Log
 import com.google.gson.Gson
 import com.github.salomonbrys.kotson.*
 import com.nhaarman.mockito_kotlin.doAnswer
@@ -32,37 +33,92 @@ class DataManagerModuleTest: DataManagerModule() {
                 .build().inject(this)
     }
 
-    override fun provideHackerNewsApi(): HackerNewsApi{
-        var count = 0
-        return mock<HackerNewsApi> {
-            on { topStories } doAnswer {
-                count++
-                if(count == 1)
-                    MockCall<List<Long>>(getJsonObjectFromFile<List<Long>>("topstrories.json") ?: ArrayList<Long>())
-                else
-                    MockCall<List<Long>>(ArrayList<Long>())
+    companion object {
+
+        var counter = 0
+
+        private val kidsBuffer: Queue<Long> by lazy {
+            val result = LinkedList<Long>()
+            for(i in 999999999L..1000099999L)
+                result.add(i)
+            Collections.shuffle(result)
+            result
+        }
+
+        private fun generateKids(newQuantity: Int): List<Long> {
+            val result: MutableList<Long> = ArrayList<Long>()
+
+            (1..newQuantity).forEach {
+                result.add(kidsBuffer.remove())
             }
-            on { getStoryItem(14529079) } doReturn MockCall<Story>(getJsonObjectFromFile<Story>("stories/14529079.json") ?: Story())
-            on { getStoryItem(14529376) } doReturn MockCall<Story>(getJsonObjectFromFile<Story>("stories/14529376.json") ?: Story())
-            on { getStoryItem(14530551) } doReturn MockCall<Story>(getJsonObjectFromFile<Story>("stories/14530551.json") ?: Story())
-            on { getCommentItem(14531277) } doReturn MockCall<Comment>(Comment(), 500)
-            on { getCommentItem(14529448) } doReturn MockCall<Comment>(getJsonObjectFromFile<Comment>("comments/14529448.json") ?: Comment())
-            on { getCommentItem(14531272) } doReturn MockCall<Comment>(getJsonObjectFromFile<Comment>("comments/14531272.json") ?: Comment())
-            on { getCommentItem(14531275) } doReturn MockCall<Comment>(getJsonObjectFromFile<Comment>("comments/14531275.json") ?: Comment())
+
+            return result
+        }
+
+        private val random: Random = Random()
+
+        val currentStories: List<Long> by lazy {
+            generateKids(random.nextInt(36)+1)
+        }
+
+    }
+
+
+    override fun provideHackerNewsApi(): HackerNewsApi{
+        return mock<HackerNewsApi> {
+
+            on { topStories } doAnswer {
+                counter++
+                Log.w(DataManagerModuleTest::class.java.simpleName, "execution count: $counter")
+                if(counter == 1)
+                    MockCall<List<Long>>(ArrayList<Long>(), 502)
+                else if(counter == 2)
+                    MockCall<List<Long>>(ArrayList<Long>())
+                else if(counter == 3 || counter == 4)
+                    MockCall<List<Long>>(currentStories)
+                else
+                    MockCall<List<Long>>(listOf(14530552))
+            }
+
+            currentStories.forEach {
+                val comments = generateKids(random.nextInt(10)+1)
+                on { getStoryItem(it) } doReturn MockCall<Story>(setStoryKids(it,
+                        getJsonObjectFromFile<Story>("stories/14529079.json") ?: Story(), comments))
+                comments.forEach {
+                    val subComments = generateKids(1)
+                    on { getCommentItem(it) } doReturn MockCall<Comment>(setCommentKids(it,
+                            getJsonObjectFromFile<Comment>("comments/14529448.json") ?: Comment(),
+                            subComments))
+                    subComments.forEach {
+                        val lastLevelComments = generateKids(1)
+                        on { getCommentItem(it) } doReturn MockCall<Comment>(setCommentKids(it,
+                                getJsonObjectFromFile<Comment>("comments/14531272.json") ?: Comment(),
+                                lastLevelComments))
+                        lastLevelComments.forEach {
+                            on { getCommentItem(it) } doReturn MockCall<Comment>(setCommentKids(it,
+                                    getJsonObjectFromFile<Comment>("comments/14531275.json") ?: Comment(),
+                                    ArrayList<Long>()))
+                        }
+                    }
+                }
+            }
+
+            on { getStoryItem(14530552) } doReturn MockCall<Story>(Story(), 500)
+            on { getCommentItem(14531277) } doReturn MockCall<Comment>(Comment(), 404)
         }
     }
 
 
-    fun simulateStoriesQuantity(stories: List<Long>, newQuantity: Int): List<Long> {
-        val result: MutableList<Long> = ArrayList<Long>()
+    fun setStoryKids(id: Long, story: Story, kids: List<Long>): Story {
+        story.id = id
+        story.kids = kids
+        return story
+    }
 
-        (1..newQuantity).forEach {
-            stories.forEach {
-                result.add(it)
-            }
-        }
-
-        return result
+    fun setCommentKids(id: Long, comment: Comment, kids: List<Long>): Comment {
+        comment.id = id
+        comment.kids = kids
+        return comment
     }
 
     inline fun <reified T> getJsonObjectFromFile(jsonFileName: String): T? where T: Any {

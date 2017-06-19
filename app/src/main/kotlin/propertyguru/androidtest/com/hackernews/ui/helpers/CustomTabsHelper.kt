@@ -7,7 +7,6 @@ import android.net.Uri
 import android.support.customtabs.CustomTabsIntent
 import android.support.v4.content.ContextCompat
 import propertyguru.androidtest.com.hackernews.R
-import propertyguru.androidtest.com.hackernews.ui.activities.WebviewActivity
 import android.content.ComponentName
 
 
