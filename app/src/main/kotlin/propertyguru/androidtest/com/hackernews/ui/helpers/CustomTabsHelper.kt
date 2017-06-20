@@ -18,7 +18,7 @@ import android.content.ComponentName
 class CustomTabsHelper(private val activity: Activity) {
 
     private val serviceAction = "android.support.customtabs.action.CustomTabsService"
-    private val chromePackege = "com.android.chrome"
+    val chromePackage = "com.android.chrome"
 
     fun openTab(url: String, error: (message: String) -> Unit) {
         if (isChromeCustomTabsSupported()) {
@@ -39,7 +39,7 @@ class CustomTabsHelper(private val activity: Activity) {
 
     private fun isChromeCustomTabsSupported(): Boolean {
         val serviceIntent = Intent(serviceAction)
-        serviceIntent.setPackage(chromePackege)
+        serviceIntent.setPackage(chromePackage)
         val resolveInfos = activity.packageManager.queryIntentServices(serviceIntent, 0)
         return !(resolveInfos == null || resolveInfos.isEmpty())
     }
@@ -49,7 +49,7 @@ class CustomTabsHelper(private val activity: Activity) {
                       uri: String, error: (message: String) -> Unit) {
 
         try {
-            customTabsIntent.intent.`package` = chromePackege
+            customTabsIntent.intent.`package` = chromePackage
             customTabsIntent.launchUrl(activity, Uri.parse(uri))
         } catch (ex: Exception) {
             error(ex.message ?: activity.getString(R.string.error_message))
@@ -58,7 +58,7 @@ class CustomTabsHelper(private val activity: Activity) {
 
     private fun forceToInstallChrome() {
 
-        val appId = chromePackege
+        val appId = chromePackage
         val rateIntent = Intent(Intent.ACTION_VIEW,
                 Uri.parse("market://details?id=" + appId))
         var marketFound = false
