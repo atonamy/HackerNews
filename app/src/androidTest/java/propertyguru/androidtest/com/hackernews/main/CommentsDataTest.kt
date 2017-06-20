@@ -123,7 +123,7 @@ class CommentsDataTest {
     @Throws(Exception::class)
     fun on05LoadedTopCommentsTestResult() {
         var story: Story? = getStory()
-        testLoadedComments(0, story?.kids, 1, {}) {
+        testLoadedComments(Pair(0, 0), story?.kids, 1, {}) {
             commentsDataHelper.loadTopLevelComments(story!!)
         }
 
@@ -134,7 +134,7 @@ class CommentsDataTest {
     @Throws(Exception::class)
     fun on06LoadedTopCommentsSuspendResumeTestResult() {
         var story: Story? = getStory()
-        testLoadedComments(0, story?.kids, 1, {
+        testLoadedComments(Pair(0, 0), story?.kids, 1, {
             Thread.sleep(1000)
             commentsDataHelper.suspend()
             Thread.sleep(500)
@@ -149,7 +149,7 @@ class CommentsDataTest {
     @Throws(Exception::class)
     fun on07LoadedCommentsTestResult() {
         var comment: Comment? = getComment()
-        testLoadedComments(0, comment?.kids, 1, {
+        testLoadedComments(Pair(0, 0), comment?.kids, 1, {
             verify(contract).onCommentsLevelChanged(1)
             verify(contract).addThread("epistasis")
         }) {
@@ -163,7 +163,7 @@ class CommentsDataTest {
     @Throws(Exception::class)
     fun on08LoadedCommentsSuspendResumeTestResult() {
         var comment: Comment? = getComment()
-        testLoadedComments(0, comment?.kids, 1, {
+        testLoadedComments(Pair(0, 0), comment?.kids, 1, {
             verify(contract).onCommentsLevelChanged(1)
             verify(contract).addThread("epistasis")
             Thread.sleep(1000)
@@ -184,7 +184,7 @@ class CommentsDataTest {
         verify(contract).initCurrentStory()
         verify(contract).clearThreads()
         val story = getStory()
-        testLoadedComments(0, story!!.kids, 1, {}, {})
+        testLoadedComments(Pair(0, 0), story!!.kids, 1, {}, {})
     }
 
 
@@ -194,7 +194,7 @@ class CommentsDataTest {
     fun on10ChangeToSecondLevelCommentsTestResult() {
         var comment: Comment? = getComment()
 
-        val topLevelSize = testLoadedComments(0, comment?.kids, 1, {
+        val topLevelSize = testLoadedComments(Pair(0, 0), comment?.kids, 1, {
             verify(contract).onCommentsLevelChanged(1)
             verify(contract).addThread("epistasis")
         }) {
@@ -288,24 +288,24 @@ class CommentsDataTest {
 
 
     @Ignore
-    private inline fun testLoadedComments(previousSize: Int, kids: List<Long>?, times: Int, body: () -> Unit,
-                                          load: () -> Unit): Int {
+    private inline fun testLoadedComments(pagesAndSize: Pair<Int, Int>, kids: List<Long>?, times: Int, body: () -> Unit,
+                                          load: () -> Unit): Pair<Int, Int> {
         assertNotNull(kids)
         val allComments  = RealmList<Comment>()
         load()
         verify(contract, times(times)).reset()
         Awaitility.await().atMost(5, TimeUnit.SECONDS).until(loadedCommentsSize())
         val totalPages = (commentsDataHelper.totalComments!! + DataManager.maxPreloadItems - 1) / DataManager.maxPreloadItems
-        verify(contract, times(totalPages*times)).populateComments(check {
+        verify(contract, times(totalPages+pagesAndSize.first)).populateComments(check {
             allComments.addAll(it)
         })
         body()
-        val realSize = allComments.size/2 - previousSize
+        val realSize = allComments.size/2 - pagesAndSize.second
         assertEquals(kids!!.size, realSize)
         for (i in 0 until kids.size)
-            assertEquals(kids[i], allComments[i+previousSize].id)
+            assertEquals(kids[i], allComments[i+pagesAndSize.second].id)
         verify(contract, times(times)).done()
 
-        return realSize
+        return Pair(totalPages, realSize)
     }
 }
