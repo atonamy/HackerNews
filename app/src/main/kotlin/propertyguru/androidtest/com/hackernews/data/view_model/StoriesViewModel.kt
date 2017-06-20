@@ -66,6 +66,6 @@ fun setItemDecoration(view: RecyclerView, decoration: RecyclerView.ItemDecoratio
 
 @BindingAdapter("loadingColor")
 fun setWaveSwipeRefreshLayoutColor(view: WaveSwipeRefreshLayout, color: Int) {
-    view.setColorSchemeColors(Color.WHITE)
+    view.setColorSchemeColors(Color.WHITE, Color.WHITE, Color.WHITE)
     view.setWaveColor(color)
 }
