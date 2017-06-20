@@ -25,7 +25,7 @@ import android.support.v7.widget.RecyclerView
 import android.view.View
 import org.hamcrest.Description
 import org.hamcrest.Matcher
-import org.junit.internal.matchers.TypeSafeMatcher
+import org.hamcrest.TypeSafeMatcher
 
 
 /**
@@ -126,6 +126,7 @@ class ItemScreenActivityTest {
 
         DataManagerModuleTest.counter = 0
         onView(withId(R.id.view_story)).perform(click())
+        Thread.sleep(5000)
     }
 
 
@@ -150,84 +151,5 @@ class ItemScreenActivityTest {
             }
         }
     }
-
-    /*@get:Rule
-    val rule: ActivityTestRule<ItemScreenActivity> = ActivityTestRule<ItemScreenActivity>(ItemScreenActivity::class.java)
-
-    @Inject
-    lateinit var api: HackerNewsApi
-    lateinit var activity: ItemScreenActivity
-    lateinit var testStory: Story
-    lateinit var testComment: Comment
-
-    val formatter: SimpleDateFormat = SimpleDateFormat("dd/MM/yyyy/HH:mm:ss")
-
-    val testStory1 = Story().apply {
-        author = "raldi"
-        url = "https://en.wikipedia.org/wiki/Area_code_710"
-        title = "Area code 710"
-        time = formatter.parse("11/06/2017/04:33:36")
-        kids = listOf(14529448, 14531272)
-        score = "273"
-        id = 14529079
-        descendants = 58
-    }
-
-    @Before
-    fun setUp() {
-        DaggerTestApiComponent.builder().dataManagerModule(DataManagerModuleTest()).build().inject(this)
-        ItemScreenActivity.suspendStart = true
-        DataManagerModuleTest.counter = 3
-        //testStory = api.getStoryItem(DataManagerModuleTest.currentStories[0]).execute().body()!!
-        //testComment = api.getCommentItem(testStory.kids[0]).execute().body()!!
-        activity = rule.launchActivity(testStory1.toIntent(Intent()))
-        //activity.commentsHelper.dataManager.hackerNewsApi = api
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun test1DisplayComments() {
-        activity.runOnUiThread {
-            activity.start()
-        }
-        //Awaitility.await().atMost(30, TimeUnit.SECONDS).until(commentsLoaded())
-        //DataManagerModuleTest.counter = 0
-
-        //onView(withId(R.id.view_replies)).perform(click())
-        //Awaitility.await().atMost(30, TimeUnit.SECONDS).until(subCommentsLoaded())
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun test2DisplayStoryUrl() {
-        activity.runOnUiThread {
-            activity.start()
-        }
-        //activity.start()
-        //onView(withId(R.id.view_story)).perform(click())
-        //intended(hasComponent(ComponentName(getTargetContext(), WebviewActivity::class.java)))
-    }
-
-    @Ignore
-    private fun commentsLoaded(): Callable<Boolean> {
-        return object : Callable<Boolean> {
-            @Throws(Exception::class)
-            override fun call(): Boolean {
-                val adapter = activity.viewModel.adapter
-                return (adapter != null && adapter.itemCount == testStory.kids.size)
-            }
-        }
-    }
-
-    @Ignore
-    private fun subCommentsLoaded(): Callable<Boolean> {
-        return object : Callable<Boolean> {
-            @Throws(Exception::class)
-            override fun call(): Boolean {
-                val adapter = activity.viewModel.adapter
-                return (adapter != null && adapter.itemCount == testComment.kids.size)
-            }
-        }
-    }*/
 
 }
