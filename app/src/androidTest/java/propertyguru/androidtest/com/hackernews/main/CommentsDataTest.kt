@@ -300,7 +300,7 @@ class CommentsDataTest {
             allComments.addAll(it)
         })
         body()
-        val realSize = allComments.size/(2*times)
+        val realSize = allComments.size/2 - previousSize
         assertEquals(kids!!.size, realSize)
         for (i in 0 until kids.size)
             assertEquals(kids[i], allComments[i+previousSize].id)
